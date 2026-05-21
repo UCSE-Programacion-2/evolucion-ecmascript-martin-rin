@@ -1,0 +1,96 @@
+name: Setup assignment issues
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: setup-issues-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  ensure-assignment-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crear issues faltantes de la actividad
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const labelName = "classroom-assignment";
+
+            const specs = [
+              {
+                title: "[Entrega] Evolucion de ECMAScript (sintaxis, modulos y asincronismo)",
+                body: [
+                  "## Objetivo",
+                  "Completar `homework.js` y resolver la ejercitacion de evolucion ECMAScript.",
+                  "",
+                  "## Que debe cumplirse",
+                  "- [ ] Se resuelven ejercicios de ternarios, spread, rest, `??` y `?.`.",
+                  "- [ ] Se implementan desestructuracion, clases con `extends` y `super`, y manejo de `Date`.",
+                  "- [ ] Se completa el trabajo de modulos CJS/ESM con los archivos en `modulos/`.",
+                  "- [ ] Se resuelven ejercicios introductorios de asincronismo y promesas."
+                ].join("\n")
+              },
+              {
+                title: "[Autograding] La suite de Jest corre en GitHub Actions",
+                body: [
+                  "## Objetivo",
+                  "Validar automaticamente la correccion ejecutando tests de Jest en Actions.",
+                  "",
+                  "## Que debe cumplirse",
+                  "- [ ] `npm ci` finaliza sin errores.",
+                  "- [ ] `npm test` corre y reporta resultado en Classroom.",
+                  "",
+                  "## Nota",
+                  "Este criterio se vincula al workflow `classroom.yml`."
+                ].join("\n")
+              }
+            ];
+
+            const color = "1d76db";
+            const description = "Issue generado automaticamente para la actividad de Classroom";
+
+            const existingLabels = await github.paginate(
+              github.rest.issues.listLabelsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+            if (!existingLabels.some((l) => l.name === labelName)) {
+              await github.rest.issues.createLabel({
+                owner, repo, name: labelName, color, description
+              });
+            }
+
+            const existingIssues = await github.paginate(
+              github.rest.issues.listForRepo,
+              { owner, repo, state: "all", per_page: 100 }
+            );
+            const titles = new Set(
+              existingIssues
+                .filter((i) => !i.pull_request)
+                .map((i) => i.title.trim())
+            );
+
+            for (const spec of specs) {
+              if (titles.has(spec.title)) {
+                core.info(`Ya existe: ${spec.title}`);
+                continue;
+              }
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: spec.title,
+                body: spec.body,
+                labels: [labelName]
+              });
+              core.info(`Creado: ${spec.title}`);
+            }

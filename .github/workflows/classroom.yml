@@ -1,0 +1,48 @@
+name: Pruebas automaticas (Classroom)
+
+on:
+  push:
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias
+        id: test-install
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Instalacion de dependencias (npm ci)'
+          command: 'bash scripts/classroom-check.sh install'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 120
+          max-score: 20
+
+      - name: Ejecutar Jest
+        id: test-jest
+        uses: classroom-resources/autograding-io-grader@v1
+        with:
+          test-name: 'Suite de tests de evolucion ECMAScript (npm test)'
+          command: 'bash scripts/classroom-check.sh tests'
+          expected-output: 'CORRECTO'
+          comparison-method: exact
+          timeout: 180
+          max-score: 80
+
+      - name: Reporte para GitHub Classroom
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          TEST-INSTALL_RESULTS: '${{ steps.test-install.outputs.result }}'
+          TEST-JEST_RESULTS: '${{ steps.test-jest.outputs.result }}'
+        with:
+          runners: test-install,test-jest
