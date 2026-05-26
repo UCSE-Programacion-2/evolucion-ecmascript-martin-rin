@@ -1,7 +1,7 @@
 // No cambies los nombres de las funciones.
 
 function usarOperadorTernario(edad) {
-  // Devuelve "mayor" si edad >= 18, y "menor" en caso contrario.
+  // Devuelve "mayor" si edad >= 18, y "menor" en caso contrarioo.
   return edad >= 18 ? "mayor" : "menor";
 }
 
